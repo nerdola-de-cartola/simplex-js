@@ -9,19 +9,16 @@ function getSubMatrix(m: Matrix, subColumns: number[]): Matrix {
         throw new Error("Could not get sub matrix")
     }
 
-    const subMatrix: Matrix = []
+    const subMatrix: Matrix = m.map((row) => []);
     let subJ = 0;
 
-    for (let i = 0; i < m.length; i++) {
-        subMatrix.push([])
-
-        for (let j = 0; j < m[i].length; j++) {
-            if (subColumns.some((columnIndex) => columnIndex === j)) {
-                subMatrix[i][subJ] = m[i][j];
-                subJ++;
-            }
+    subColumns.forEach((j) => {
+        for (let i = 0; i < m.length; i++) {
+            subMatrix[i][subJ] = m[i][j];
         }
-    }
+
+        subJ++;
+    })
 
     return subMatrix;
 }
@@ -45,6 +42,18 @@ function identityMatrix(n: number): Matrix {
     return identity;
 }
 
+function rowMultiplication(row: Vector, coefficient: number) {
+    for (let j = 0; j < row.length; j++) {
+        row[j] *= coefficient;
+    }
+}
+
+function rowAddition(targetRow: Vector, coefficient: number, supportRow: Vector) {
+    for (let j = 0; j < targetRow.length; j++) {
+        targetRow[j] += coefficient * supportRow[j];
+    }
+}
+
 function inverseMatrix(m: Matrix): Matrix {
     const numberOfRows = m.length;
     const numberOfColumns = m[0].length;
@@ -57,26 +66,60 @@ function inverseMatrix(m: Matrix): Matrix {
 
     const identity = identityMatrix(n)
 
+    printMatrix(m);
+
+    if (m[0][0] === 0) {
+        for (let i = 0; i < n; i++) {
+            if (m[i][0] !== 0) {
+                rowAddition(m[0], 1 / m[i][0], m[i]);
+                rowAddition(identity[0], 1 / m[i][0], m[i]);
+                break;
+            }
+        }
+    }
+
+    for (let j = 0; j < n; j++) {
+        for (let i = j + 1; i < n; i++) {
+            if(m[i][j] !== 0) {
+                const coefficient = -m[i][j] / m[i-1][j];
+                rowAddition(m[i], coefficient, m[i-1]);
+                rowAddition(identity[i], coefficient, m[i-1]);
+            }
+        }
+    }
+
+    /**
+     * 
+    for (let i = 0; i < n; i++) {
+        if (m[i][i] !== 1) {
+            const coefficient = 1 / m[i][i];
+            rowMultiplication(m[i], coefficient);
+            rowMultiplication(identity[i], coefficient);
+        }
+    }
+    */
+
+    printMatrix(m);
     printMatrix(identity);
 
-    return [[]];
+
+    return identity;
 }
 
-function simplexSecondPhase(A: Matrix, b: Vector, C: Vector) {
-    printMatrix(A);
+function simplexSecondPhase(A: Matrix, b: Vector, C: Vector, initialBase: number[]) {
+    const Ib = initialBase;
+    const In = [];
 
-    const Xb = [2, 3, 4];
-    const Xn = [0, 1];
+    for (let i = 0; i < A[0].length; i++) {
+        if (initialBase.every((index) => index !== i)) {
+            In.push(i)
+        }
+    }
 
-    const B = getSubMatrix(A, Xb);
-    const N = getSubMatrix(A, Xn);
-
-    printMatrix(B);
-    printMatrix(N);
+    const B = getSubMatrix(A, Ib);
+    const N = getSubMatrix(A, In);
 
     const inverseB = inverseMatrix(B);
-
-    printMatrix(inverseB);
 }
 
 function printVector(v: Vector) {
@@ -110,14 +153,14 @@ function main() {
     const A = [
         [1, 2, 1, 0, 0],
         [4, 0, 0, 1, 0],
-        [1, -5, 0, 0, 1]
+        [-1, -5, 0, 0, 1]
     ]
 
     const C = [
         1, 2, 0, 0
     ]
 
-    simplexSecondPhase(A, b, C)
+    simplexSecondPhase(A, b, C, [3, 1, 0])
 }
 
 main()
