@@ -131,7 +131,19 @@ function multiplyMatrix(a: Matrix, b: Matrix) {
     return x;
 }
 
-function simplexSecondPhase(A: Matrix, b: Vector, C: Vector, initialBase: number[]) {
+function transposeMatrix(m: Matrix) {
+    const transpose: Matrix = m[0].map(() => []);
+
+    for (let i = 0; i < m.length; i++) {
+        for (let j = 0; j < m[i].length; j++) {
+            transpose[j][i] = m[i][j];
+        }
+    }
+
+    return transpose;
+}
+
+function simplexSecondPhase(A: Matrix, b: Matrix, C: Matrix, initialBase: number[]) {
     const Ib = initialBase;
     const In = [];
 
@@ -144,20 +156,18 @@ function simplexSecondPhase(A: Matrix, b: Vector, C: Vector, initialBase: number
     const B = getSubMatrix(A, Ib);
     const N = getSubMatrix(A, In);
 
+    const Ct = transposeMatrix(C);
+
+    const Ctb = getSubMatrix(Ct, Ib);
+    const Ctn = getSubMatrix(Ct, In);   
+
+    printMatrix(Ctb);
+    printMatrix(Ctn);
+
     const inverseB = inverseMatrix(B);
 
-    printMatrix(inverseB);
-    printMatrix(N);
-
     const inverseBTimesN = multiplyMatrix(inverseB, N);
-
-    printMatrix(inverseBTimesN);
 }
-
-function printVector(v: Vector) {
-    console.log(v);
-}
-
 
 function printMatrix(m: Matrix) {
     m.forEach((line) => {
@@ -179,7 +189,9 @@ function printMatrix(m: Matrix) {
 
 function main() {
     const b = [
-        6, 2, 1
+        [6],
+        [2],
+        [1]
     ]
 
     const A = [
@@ -189,7 +201,11 @@ function main() {
     ]
 
     const C = [
-        1, 2, 0, 0
+        [1],
+        [2],
+        [0],
+        [0],
+        [0]
     ]
 
     simplexSecondPhase(A, b, C, [3, 1, 0])
