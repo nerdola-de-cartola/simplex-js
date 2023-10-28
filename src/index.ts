@@ -9,7 +9,7 @@ function getSubMatrix(m: Matrix, subColumns: number[]): Matrix {
         throw new Error("Could not get sub matrix")
     }
 
-    const subMatrix: Matrix = m.map((row) => []);
+    const subMatrix: Matrix = m.map(() => []);
     let subJ = 0;
 
     subColumns.forEach((j) => {
@@ -66,13 +66,12 @@ function inverseMatrix(m: Matrix): Matrix {
 
     const identity = identityMatrix(n)
 
-    printMatrix(m);
-
     if (m[0][0] === 0) {
         for (let i = 0; i < n; i++) {
             if (m[i][0] !== 0) {
-                rowAddition(m[0], 1 / m[i][0], m[i]);
-                rowAddition(identity[0], 1 / m[i][0], m[i]);
+                const coefficient = 1 / m[i][0];
+                rowAddition(m[0], coefficient, m[i]);
+                rowAddition(identity[0], coefficient, identity[i]);
                 break;
             }
         }
@@ -81,29 +80,55 @@ function inverseMatrix(m: Matrix): Matrix {
     for (let j = 0; j < n; j++) {
         for (let i = j + 1; i < n; i++) {
             if(m[i][j] !== 0) {
-                const coefficient = -m[i][j] / m[i-1][j];
-                rowAddition(m[i], coefficient, m[i-1]);
-                rowAddition(identity[i], coefficient, m[i-1]);
+                const coefficient = -m[i][j] / m[j][j];
+                rowAddition(m[i], coefficient, m[j]);
+                rowAddition(identity[i], coefficient, identity[j]);
             }
         }
     }
 
-    /**
-     * 
-    for (let i = 0; i < n; i++) {
+    for (let j = 1; j < n; j++) {
+        for (let i = 0; i < j; i++) {
+            if(m[i][j] !== 0) {
+                const coefficient = -m[i][j] / m[j][j];
+                rowAddition(m[i], coefficient, m[j]);
+                rowAddition(identity[i], coefficient, identity[j]);
+            }
+        }
+    }
+
+    for (let i = 1; i < n; i++) {
         if (m[i][i] !== 1) {
             const coefficient = 1 / m[i][i];
             rowMultiplication(m[i], coefficient);
             rowMultiplication(identity[i], coefficient);
         }
     }
-    */
-
-    printMatrix(m);
-    printMatrix(identity);
-
 
     return identity;
+}
+
+function multiplyMatrix(a: Matrix, b: Matrix) {
+    if(a[0].length !== b.length) {
+        throw new Error("Could not perform matrix multiplication");
+    }
+
+    const numberOfRows = a.length;
+    const numberOfColumns = b[0].length;
+
+    const x: Matrix = a.map(() => []);
+
+    for (let row = 0; row < numberOfRows; row++) {
+        for (let column = 0; column < numberOfColumns; column++) {
+            x[row][column] = 0;
+
+            for (let index = 0; index < b.length; index++) {
+                x[row][column] += a[row][index] * b[index][column];
+            }
+        }
+    }
+
+    return x;
 }
 
 function simplexSecondPhase(A: Matrix, b: Vector, C: Vector, initialBase: number[]) {
@@ -120,6 +145,13 @@ function simplexSecondPhase(A: Matrix, b: Vector, C: Vector, initialBase: number
     const N = getSubMatrix(A, In);
 
     const inverseB = inverseMatrix(B);
+
+    printMatrix(inverseB);
+    printMatrix(N);
+
+    const inverseBTimesN = multiplyMatrix(inverseB, N);
+
+    printMatrix(inverseBTimesN);
 }
 
 function printVector(v: Vector) {
