@@ -79,7 +79,7 @@ function inverseMatrix(m: Matrix): Matrix {
 
     for (let j = 0; j < n; j++) {
         for (let i = j + 1; i < n; i++) {
-            if(m[i][j] !== 0) {
+            if (m[i][j] !== 0) {
                 const coefficient = -m[i][j] / m[j][j];
                 rowAddition(m[i], coefficient, m[j]);
                 rowAddition(identity[i], coefficient, identity[j]);
@@ -89,7 +89,7 @@ function inverseMatrix(m: Matrix): Matrix {
 
     for (let j = 1; j < n; j++) {
         for (let i = 0; i < j; i++) {
-            if(m[i][j] !== 0) {
+            if (m[i][j] !== 0) {
                 const coefficient = -m[i][j] / m[j][j];
                 rowAddition(m[i], coefficient, m[j]);
                 rowAddition(identity[i], coefficient, identity[j]);
@@ -97,7 +97,7 @@ function inverseMatrix(m: Matrix): Matrix {
         }
     }
 
-    for (let i = 1; i < n; i++) {
+    for (let i = 0; i < n; i++) {
         if (m[i][i] !== 1) {
             const coefficient = 1 / m[i][i];
             rowMultiplication(m[i], coefficient);
@@ -109,7 +109,7 @@ function inverseMatrix(m: Matrix): Matrix {
 }
 
 function multiplyMatrix(a: Matrix, b: Matrix) {
-    if(a[0].length !== b.length) {
+    if (a[0].length !== b.length) {
         throw new Error("Could not perform matrix multiplication");
     }
 
@@ -143,30 +143,22 @@ function transposeMatrix(m: Matrix) {
     return transpose;
 }
 
-function simplexSecondPhase(A: Matrix, b: Matrix, C: Matrix, initialBase: number[]) {
-    const Ib = initialBase;
-    const In = [];
+function subtractMatrix(a: Matrix, b: Matrix) {
+    if (a.length !== b.length || a[0].length !== b[0].length) {
+        throw new Error("Could not perform matrix subtraction")
+    }
 
-    for (let i = 0; i < A[0].length; i++) {
-        if (initialBase.every((index) => index !== i)) {
-            In.push(i)
+    const result: Matrix = a.map(() => []);
+    const totalRows = a.length;
+    const totalColumns = a[0].length;
+
+    for (let i = 0; i < totalRows; i++) {
+        for (let j = 0; j < totalColumns; j++) {
+            result[i][j] = a[i][j] - b[i][j];
         }
     }
 
-    const B = getSubMatrix(A, Ib);
-    const N = getSubMatrix(A, In);
-
-    const Ct = transposeMatrix(C);
-
-    const Ctb = getSubMatrix(Ct, Ib);
-    const Ctn = getSubMatrix(Ct, In);   
-
-    printMatrix(Ctb);
-    printMatrix(Ctn);
-
-    const inverseB = inverseMatrix(B);
-
-    const inverseBTimesN = multiplyMatrix(inverseB, N);
+    return result;
 }
 
 function printMatrix(m: Matrix) {
@@ -187,17 +179,142 @@ function printMatrix(m: Matrix) {
     console.log("");
 }
 
+function getBestCost(v: Vector) {
+    let bestCostIndex = null;
+
+    for (let index = 0; index < v.length; index++) {
+        if (bestCostIndex === null && v[index] > 0) {
+            bestCostIndex = index
+        } else if (bestCostIndex !== null && v[index] > v[bestCostIndex]) {
+            bestCostIndex = index;
+        }
+    }
+
+    return bestCostIndex;
+}
+
+function getNextVariable(v: Vector) {
+    let bestIndex = null;
+
+    for (let index = 0; index < v.length; index++) {
+        if(bestIndex === null && v[index] >= 0){
+            bestIndex = index;
+        } else if(bestIndex !== null && v[index] > 0 && v[index] < v[bestIndex]) {
+            bestIndex = index;
+        }
+    }
+
+    return bestIndex;
+}
+
+function composeMatrix(m: Matrix, Ib: number[], In: number[]) {
+    const compose = [];
+
+    const size = Math.max(Math.max(...Ib), Math.max(...In)) + 1;
+
+    for (let index = 0; index < size; index++) {
+        if(In.some((element) => element === index)) {
+            compose[index] = 0;
+        } else {
+            const rowOfm  = Ib.findIndex((element) => element === index);
+            compose[index] = m[rowOfm][0];
+        }
+    }
+
+    return compose;
+}
+
+function simplex(A: Matrix, b: Matrix, Ct: Matrix, Ib: number[], In: number[]) {
+    console.log(`Ib = ${Ib}`);
+    console.log(`In = ${In}`);
+
+    const B = getSubMatrix(A, Ib);
+    const N = getSubMatrix(A, In);
+
+    const Ctb = getSubMatrix(Ct, Ib);
+    const Ctn = getSubMatrix(Ct, In);
+
+    const inverseB = inverseMatrix(B);
+
+    const inverseBTimesN = multiplyMatrix(inverseB, N);
+
+    const reduceCostVector = subtractMatrix(Ctn, multiplyMatrix(Ctb, inverseBTimesN));
+
+    console.log("")
+    console.log("Reduce cost vector:")
+    printMatrix(reduceCostVector);
+    
+    const bestCostIndex = getBestCost(reduceCostVector[0]);
+    
+    const inverseBTimesb = multiplyMatrix(inverseB, b);
+
+    if (bestCostIndex === null) {
+        const X = composeMatrix(inverseBTimesb, Ib, In);
+        const [[bestValue]] = multiplyMatrix(Ctb, inverseBTimesb);
+        return {
+            variables: X,
+            value: bestValue
+        }
+    }
+    
+    const possibleValuesForX = [];
+    
+    for (let row = 0; row < inverseBTimesb.length; row++) {
+        possibleValuesForX.push( inverseBTimesb[row][0] / inverseBTimesN[row][bestCostIndex] )
+    }
+    
+    console.log("")
+    console.log("Possible values for X:")
+    printMatrix([possibleValuesForX]);
+    
+    const indexToSwap = getNextVariable(possibleValuesForX);
+
+    if(indexToSwap === null) {
+        return Infinity;
+    }
+    
+    
+    const newIb = Ib.map((variable, variableIndex) =>
+        variableIndex === indexToSwap ? In[bestCostIndex] : variable
+        )
+        
+    const newIn = In.map((variable, variableIndex) =>
+        variableIndex === bestCostIndex ? Ib[indexToSwap] : variable
+    );
+
+    console.log(`Swap variable X${In[bestCostIndex] + 1} for variable X${Ib[indexToSwap] + 1}`);
+    console.log(`-------------------------------------------`);
+
+    return simplex(A, b, Ct, newIb, newIn);
+}
+
+function simplexSecondPhase(A: Matrix, b: Matrix, C: Matrix, initialBase: number[]) {
+    const Ib = initialBase;
+    const In = [];
+
+    // Find initial In from initial Ib
+    for (let i = 0; i < A[0].length; i++) {
+        if (Ib.every((index) => index !== i)) {
+            In.push(i)
+        }
+    }
+
+    const Ct = transposeMatrix(C);
+
+    return simplex(A, b, Ct, Ib, In);
+}
+
 function main() {
     const b = [
-        [6],
-        [2],
+        [7],
+        [34],
         [1]
     ]
 
     const A = [
-        [1, 2, 1, 0, 0],
-        [4, 0, 0, 1, 0],
-        [-1, -5, 0, 0, 1]
+        [ 3, -1, 1, 0, 0],
+        [ 1,  1, 0, 1, 0],
+        [-1,  2, 0, 0, 1]
     ]
 
     const C = [
@@ -208,7 +325,13 @@ function main() {
         [0]
     ]
 
-    simplexSecondPhase(A, b, C, [3, 1, 0])
+    const result = simplexSecondPhase(A, b, C, [2, 3, 4])
+
+    if (result === Infinity) {
+        console.log("O problema é ilimitado");
+    }
+
+    console.log(result);
 }
 
-main()
+main();
