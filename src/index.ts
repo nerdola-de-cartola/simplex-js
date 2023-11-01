@@ -238,13 +238,13 @@ function simplex(A: Matrix, b: Matrix, Ct: Matrix, Ib: number[], In: number[]) {
 
     const inverseBTimesN = multiplyMatrix(inverseB, N);
 
-    const reduceCostVector = subtractMatrix(Ctn, multiplyMatrix(Ctb, inverseBTimesN));
+    const [reduceCostVector] = subtractMatrix(Ctn, multiplyMatrix(Ctb, inverseBTimesN));
 
     console.log("")
     console.log("Reduce cost vector:")
-    printMatrix(reduceCostVector);
+    console.log(reduceCostVector);
     
-    const bestCostIndex = getBestCost(reduceCostVector[0]);
+    const bestCostIndex = getBestCost(reduceCostVector);
     
     const inverseBTimesb = multiplyMatrix(inverseB, b);
 
@@ -282,7 +282,7 @@ function simplex(A: Matrix, b: Matrix, Ct: Matrix, Ib: number[], In: number[]) {
         variableIndex === bestCostIndex ? Ib[indexToSwap] : variable
     );
 
-    console.log(`Swap variable X${In[bestCostIndex] + 1} for variable X${Ib[indexToSwap] + 1}`);
+    console.log(`Swap variable X${In[bestCostIndex]} for variable X${Ib[indexToSwap]}`);
     console.log(`-------------------------------------------`);
 
     return simplex(A, b, Ct, newIb, newIn);
@@ -306,26 +306,46 @@ function simplexSecondPhase(A: Matrix, b: Matrix, C: Matrix, initialBase: number
 
 function main() {
     const b = [
-        [7],
-        [34],
-        [1]
+        [25],
+        [25],
+        [25],
+        [25],
+        [25],
+        [25],
+        [50],
+        [35]
     ]
 
     const A = [
-        [ 3, -1, 1, 0, 0],
-        [ 1,  1, 0, 1, 0],
-        [-1,  2, 0, 0, 1]
+        //1  2  3  4  5  6  7  8  9  10  11  12  13  14
+        [ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0,  0,  0,  0,  0 ],
+        [ 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,  0,  0,  0,  0 ],
+        [ 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,  0,  0,  0,  0 ],
+        [ 0, 0, 0, 1, 0, 0, 0, 0, 0, 1,  0,  0,  0,  0 ],
+        [ 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,  1,  0,  0,  0 ],
+        [ 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,  0,  1,  0,  0 ],
+        [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0,  0,  0, -1,  0 ],
+        [ 0, 1, 1, 0, 1, 0, 0, 0, 0, 0,  0,  0,  0,  1 ]
     ]
 
     const C = [
-        [1],
-        [2],
+        [8.65],
+        [9.5],
+        [10],
+        [8.75],
+        [9.25],
+        [9],
         [0],
         [0],
-        [0]
+        [0],
+        [0],
+        [0],
+        [0],
+        [0],
+        [0],
     ]
 
-    const result = simplexSecondPhase(A, b, C, [2, 3, 4])
+    const result = simplexSecondPhase(A, b, C, [6, 7, 8, 9, 10, 11, 5, 13])
 
     if (result === Infinity) {
         console.log("O problema é ilimitado");
